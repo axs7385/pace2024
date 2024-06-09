@@ -1,14 +1,21 @@
-# pace2024
+# one-sided crossing minimization problem Solver(The Heuristic Track)
 
-This is a submission in Pace 2024 The Heuristic Track.
+This repository containsheuristic one-sided crossing minimization problem Solver that were developed for the PACE 2024 challenge.
 
-## Compile
+To use it, you only need the C++ standard library and a g++ compiler.
 
+To build, use:
+```
 g++ pace.cpp -o pace -O2
+```
 
-## Usage
-
+To run, use:
+```
 ./pace
+```
+
+The problem is piped in via STDIN.
+The solution is emitted via STDOUT.
 
 ## License
 
