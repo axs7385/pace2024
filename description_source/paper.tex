@@ -1,0 +1,226 @@
+
+\documentclass[a4paper,ctexart,UKenglish,cleveref, autoref, thm-restate]{lipics-v2021}
+%This is a template for producing LIPIcs articles. 
+%See lipics-v2021-authors-guidelines.pdf for further information.
+%for A4 paper format use option "a4paper", for US-letter use option "letterpaper"
+%for british hyphenation rules use option "UKenglish", for american hyphenation rules use option "USenglish"
+%for section-numbered lemmas etc., use "numberwithinsect"
+%for enabling cleveref support, use "cleveref"
+%for enabling autoref support, use "autoref"
+%for anonymousing the authors (e.g. for double-blind review), add "anonymous"
+%for enabling thm-restate support, use "thm-restate"
+%for enabling a two-column layout for the author/affilation part (only applicable for > 6 authors), use "authorcolumns"
+%for producing a PDF according the PDF/A standard, add "pdfa"
+
+%\pdfoutput=1 %uncomment to ensure pdflatex processing (mandatatory e.g. to submit to arXiv)
+
+\hideLIPIcs  %uncomment to remove references to LIPIcs series (logo, DOI, ...), e.g. when preparing a pre-final version to be uploaded to arXiv or another public repository
+
+%\graphicspath{{./graphics/}}%helpful if your graphic files are in another directory
+
+\bibliographystyle{plainurl}% the mandatory bibstyle
+
+\usepackage[UTF8, scheme=plain, punct=plain, zihao=false]{ctex}
+
+% \usepackage{hologo}
+% \usepackage[super]{gbt7714}
+
+\title{PACE Challenge 2024: AXS Heuristic Solver Description } %TODO Please add
+
+\titlerunning{The AXS Algorithm} %TODO optional, please use if title is longer than one line
+
+%TODO mandatory, please use full name; only 1 author per \author macro; first two parameters are mandatory, other parameters can be empty. Please provide at least the name of the affiliation and the country. The full address is optional
+\author{Haocheng Zhu}{University of Electronic Science and Technology of China, Chengdu, China}{axs7384@gmail.com}{}{}
+\author{Yi Zhou}{University of Electronic Science and Technology of China, Chengdu, China}{zhou.yi@uestc.edu.cn}{https://orcid.org/0000-0002-9023-4374}{}
+\author{Bo Peng}{Southwestern University of Finance and Economics, Chengdu, China}{pengbo@swufe.edu.cn}{}{}
+
+\authorrunning{C. Zhu et al.} %TODO mandatory. First: Use abbreviated first/middle names. Second (only in severe cases): Use first author plus 'et al.'
+
+\Copyright{Haocheng Zhu, Yi Zhou and Bo Peng} %TODO mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
+
+\ccsdesc[100]{Mathematics of computing $\rightarrow$ Graph algorithms} %TODO mandatory: Please choose ACM 2012 classifications from https://dl.acm.org/ccs/ccs_flat.cfm 
+
+\keywords{Cross minimization, Local search, Student submission} %TODO mandatory; please add comma-separated list of keywords
+
+%\category{} %optional, e.g. invited paper
+
+%\relatedversion{} %optional, e.g. full version hosted on arXiv, HAL, or other respository/website
+%\relatedversiondetails[linktext={opt. text shown instead of the URL}, cite=DBLP:books/mk/GrayR93]{Classification (e.g. Full Version, Extended Version, Previous Version}{URL to related version} %linktext and cite are optional
+
+\supplement{The source code is available on GitHub (\url{https://github.com/axs7385/pace2024}) and Zenodo (\url{https://doi.org/10.5281/zenodo.11601355}).}%optional, e.g. related research data, source code, ... hosted on a repository like zenodo, figshare, GitHub, ...
+%\supplementdetails[linktext={opt. text shown instead of the URL}, cite=DBLP:books/mk/GrayR93, subcategory={Description, Subcategory}, swhid={Software Heritage Identifier}]{General Classification (e.g. Software, Dataset, Model, ...)}{URL to related version} %linktext, cite, and subcategory are optional
+
+%\funding{(Optional) general funding statement \dots}%optional, to capture a funding statement, which applies to all authors. Please enter author specific funding statements as fifth argument of the \author macro.
+
+%\acknowledgements{I want to thank \dots}%optional
+
+\nolinenumbers %uncomment to disable line numbering
+
+
+%Editor-only macros:: begin (do not touch as author)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\EventEditors{John Q. Open and Joan R. Access}
+\EventNoEds{2}
+\EventLongTitle{42nd Conference on Very Important Topics (CVIT 2016)}
+\EventShortTitle{CVIT 2016}
+\EventAcronym{CVIT}
+\EventYear{2016}
+\EventDate{December 24--27, 2016}
+\EventLocation{Little Whinging, United Kingdom}
+\EventLogo{}
+\SeriesVolume{42}
+\ArticleNo{23}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\maketitle
+
+%TODO mandatory: add short abstract of the document
+\begin{abstract}
+The one-sided crossing minimization (OCM) problem involves arranging the nodes of a bipartite graph on two layers (typically horizontal), with one of the layers fixed, aiming to minimize the number of edge crossings. 
+The OCM is one of the basic building blocks used for drawing hierarchical graphs, but it is NP-hard.
+In this paper, we introduce a local search algorithm to solve this problem. The algorithm is characterized by a dynamic programming-based neigborhoods framework and multiple neighbor move operations. The algorithm has been implemented in C++ and submitted to the 2024 PACE challenge.
+\end{abstract}
+
+\section{Preliminaries}
+%{\color{red}Problem formulation;}
+%The problem of this year’s challenge is formulated as follows.
+%to compute a 2-layered drawing of a bipartite graph, where one side is fixed, with a minimum number of crossings. More precisely:
+
+ The input of the one-sided crossing minimization (OCM) problem is a bipartite graph $G=((A\cup B),E)$ and a fixed linear order of $A$. The objective is to find a linear order of $B$ such that the number of edge crossings in a straight-line drawing of $G$ with $A$ and $B$ on two parallel lines, following their linear order, is minimized.
+
+For convenience, we define $n=|A|,m=|B|,k=|E|$. We use $p$ to denote a linear order of $B$, and $p_i$ to denote the $i_{th}$ node of the order.
+
+Given an order $p$, for two vertices $u,v\in B$, we define $c_{u,v}$ as the number of edge crossings between $u,v$ while $u$ is positioned in front of $v$. 
+Note that $c_{u,v}\neq c_{v,u}$ because $c_{v,u}$ is the number of crossings between $u,v$, while $v$ is in front of $u$.
+
+\section{The General Framework}
+%{\color{red} Genetic + local search}
+
+The graph is represented as an adjacency list from $B$.
+First, we pre-process $c_{u,v}$ in $O(mk)$, and we obtain the initial order of $B$ by sorting according to the average number of neighbors of vertices in $B$.
+Now, every linear order of $B$ is called a solution.
+
+After that, we use dynamic programming-based local search to obtain several solutions as the initial population, and then perform crossover on them. We execute the genetic algorithm until we reach half the time limit.
+Finally, we choose the best solution in population. 
+We alternate between dynamic programming local search and block local search, trying to optimize the solution. 
+
+It is a \textbf{student submission}. Meanwhile, we submit a similar program on the exact and parameterized track.
+%The algorithm begins with an initial order of $B$ obtained by a simple greedy algorithm. 
+%We then use dynamic programming to explore the best solution among some neighborhoods, which may include several disjoint moves. 
+%To avoid getting stuck in local optima, we employ a genetic algorithm.
+
+
+\subsection{Genetic Algorithm}
+
+%Due to the limited development time, 
+The genetic algorithm in our algorithm follows the regular framework evolutionary algorithm.
+We maintain a pool of 10 solutions (called chromosome using the language of evolutionary algorithm).
+%Each solution is a order of set $B$.
+In each round, we randomly pick up two chromosomes $p1$ and $p2$ and use a crossover to generate another offspring solution.
+The generating procedure is specified as follows.
+%includes a crossover operations and evaluating individual quality based on the number of crossings.
+
+%Since our emphasis lies on the relative order of B, we opt for Order Crossover(OX). 
+%It ensures that each element appears exactly once in the offspring. The specific process of the OX is as follows:
+
+\begin{enumerate}
+    \item Randomly select two crossover positions, $a$ and $b$, in $p1$, assume $a<b$ w.l.o.g.
+    \item Copy the subsequence between the two positions, $p1[a,...,b]$, to the offspring solution $child$.
+    %\item Starting from the $b$, traverse the other parent's chromosome in order, and 
+   \item  Fill the remaining positions in $child$ by remaining elements of $B$, keeping the order of these elements the same as $p2$.   
+\end{enumerate}
+
+For example, given two parent chromosomes: $Parent1 = [1,2,3,4,5]$ and $ Parent2 = [5,4,3,2,1]$, we randomly select two crossover points $3,4$. Next, we copy the subsequence between the crossover points from $Parent1$ to the offspring, and obtain $Child = [\_,\_,|3,4,|\_]$. Then, we fill the elements in $B\setminus \{3,4\}$ by following the order $p2$. We finally obtain $Child = [5, 2,| 3, 4,| 1]$.
+
+
+
+
+\subsection{Dynamic Programming-Based Local Search}
+
+The core of our solver is a local search algorithm based on an extended dynamic programming algorithm in \cite{pb}.
+First, suppose that we have an order $p$. 
+%Now we want to change the order to decrease the number of edge crossings by local search.
+%It is clear that the number of edge crossings depends only on the relative order of the vertices. 
+%If we swap two adjacent vertices $u,v$, only the relative order within $u,v$; 
+%For example, swapping two vertices only changes the relative order between these two vertices and has no effect on other vertices. Therefore, if the intervals of two moves do not overlap, their impact on the total number of edge crossings is independent. 
+%We use the following dynamic programming problem. 
+%Each interval has a certain weight, and we need to select several non-overlapping intervals to maximize the sum of their weights. 
+We let $dp(i)$ denote the maximum reduction in the number of edge crossings for the first $i$ vertices, and $f(l,r)$ denote the reduction in the number of edge crossings for one or some \textit{move} within the interval $[l,r]$. We can derive the following dynamic programming transition equation:
+
+$$
+dp(i) = 
+\begin{cases}   
+0 & \text{if } i = 0, \\
+\max_{j=0..i-1}dp(j)+f(j+1,i) & \text{if } i\in[1,m]. 
+\end{cases}
+$$
+
+%What do we mean by "move"? 
+In our algorithm, we include the following types of \textit{move}. 
+%In fact, there are many other possible moves, but some are not effective, and some we may not have considered yet.
+
+\begin{enumerate}
+    \item \textbf{Insert}
+    Without loss of generality, we currently consider only left-to-right insertion. For an order $p$, we move $p_l$ after $p_r$. We call this move "Insert". 
+    The move can be divided into a sequence of adjacent swaps, that is, the move is equal to swapping $p_l$ with $p_{l+1}$,$p_{l+1}$ with $p_{l+2}$ ,..., and $p_{r-1}$ with $p_{r}$. 
+    After any swap between two adjacent vertices $u,v$, the change of the crossing number is $c_{v,u}-c_{u,v}$. Therefore, the crossing number is changed by $\sum_{i=l+1}^{r}(c_{p_i,p_l}-c_{p_l,p_i})$ after inserting $p_l$ after $p_r$.
+    By preprocessing the prefix sum of $c_{u,v}-c_{v,u}$ according to the order of $p$, we can quickly calculate the change in crossing number for each insertion.
+
+    The following types of moves can all be decomposed into several insertion operations, so our explanation will be relatively straightforward.
+    \item \textbf{Swap}
+    
+    For an order $p$, we call the swap between $p_l$ and $p_r$ as \textit{swap} move. The swap can be divided into inserting $p_l$ after $p_{r-1}$ and inserting $p_r$ before $p_l$, the crossing number is changed by$\sum_{i=l+1}^{r-1}(c_{p_i,p_l}-c_{p_l,p_i})+\sum_{i=l}^{r-1}(c_{p_r,p_i}-c_{p_i,p_r})$.
+    
+    \item \textbf{Block-Insert}
+    
+    %To increase the neighborhood of order $p$, 
+    We modify the insert move by moving a single vertex to moving a continuous block and obtaining the \textit{block-insert}. Without loss of generality, we consider only the insertion of lower-rank vertices into the higher-rank position. 
+    That is, for an order $p$, we move $p_l,p_{l+1},\ldots,p_{l+sz-1}$ after $p_r$ where $r>l+sz-1$ by \textit{block-insert}. The crossing number is changed by$\sum_{i=l}^{l+sz-1}(\sum_{j=l+sz}^{r}(c_{p_j,p_i}-c_{p_i,p_j}))$.
+
+    \item \textbf{Block-Swap}
+    
+    It is clear that we can also swap two blocks. 
+    For an order $p$, the swap between a subsequence $p_l$, $p_{l+1}$, $\ldots$ , $p_{l+sz-1}$ and another subsequence $p_{r-sz`+1}$, $p_{r-sz`+1}$, $\ldots$, $p_r$ is called \textit{block-swap}. 
+    The crossing number is changed by $\sum_{i=l}^{l+sz-1}(\sum_{j=l+sz}^{r}(c_{p_j,p_i}-c_{p_i,p_j}))+\sum_{i=r-sz`+1}^{r}(\sum_{j=l+sz}^{r-sz`}(c_{p_i,p_j}-c_{p_j,p_i}))$ after a block-swap.
+\end{enumerate}
+
+This best size of a block depends heavily on the data instance.
+To balance time and effectiveness, we set it as 2. 
+%Modifying  can have a significant impact on different instances.
+
+Based on the various moves mentioned above, for each subsequence in the interval $[l, r]$, we select the move that maximizes the reduction of the crossing number to compute $f(l, r)$.
+We can preprocess the contributions of all moves in $O(m^2)$ time. 
+The time complexity of each transition is also $O(m^2)$, so the overall time complexity for performing dynamic programming is $O(m^2)$.
+
+
+
+
+
+\subsection{Block Local Search}
+%Similarly to other sorting problems such as the TSP, we may encounter algorithms with time complexities of $O(2^n)$ or $O(n*2^n)$. 
+First, suppose that we have a solution $p$, and we can improve it by calculating a better solution by reordering a subsequence $Block$ which was chosen randomdly. 
+
+Let $g(S)$ denote the minimal number of edge crossings for the vertex set $S\subseteq Block$. 
+We can derive the following dynamic programming transition equation:
+$$
+g(S) = 
+\begin{cases} 
+0 & \text{if } S = \emptyset, \\
+\min_{u\in S}(g(S\setminus\{u\})+\sum_{v\in S\setminus\{u\}}c(v,u)) & \text{if } S\subseteq Block \ and \  S \neq \emptyset. 
+\end{cases}
+$$
+
+The time complexity of this dynamic programming is $O(|Block|*2^{|Block|})$, and the space complexity is $O(2^{|Block|})$. To balance time consumption and effectiveness, the block size is set to 18.
+
+\section{}
+
+%%
+%% Bibliography
+%%
+
+%% Please use bibtex, 
+
+\bibliography{paper}
+
+\end{document}
